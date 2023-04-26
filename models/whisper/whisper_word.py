@@ -80,7 +80,6 @@ class Whisper:
         t = time.time()
         result = self.model.transcribe(audio_np, batch_size=16)
         print(f"transcribe: {time.time() - t}")
-        # print(result_aligned['word_segments'])
         t = time.time()
         result_aligned = whisperx.align(result["segments"], self.model_a, self.metadata, audio_np, "cuda")
         print(f"align: {time.time() - t}")
@@ -101,18 +100,3 @@ class Whisper:
             })
 
         return out
-        # for segment in result[0]:
-        #     words = []
-        #     for word in segment.words:
-        #         words.append({
-        #             'word': word.word,
-        #             'start': word.start + start_time,
-        #             'end': word.end + start_time,
-        #             'probability': word.probability
-        #         })
-        #     out.append({
-        #         'text': segment.text,
-        #         'start': segment.start + start_time,
-        #         'end': segment.end + start_time,
-        #         'words': words
-        #     })
