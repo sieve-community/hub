@@ -5,22 +5,29 @@ from typing import Dict
     name="whisperx",
     gpu = True,
     python_packages=[
-        "git+https://github.com/guillaumekln/faster-whisper",
+        "git+https://github.com/m-bain/whisperx.git@v3",
         "ffmpeg-python==0.2.0",
     ],
     system_packages=["libgl1-mesa-glx", "libglib2.0-0", "ffmpeg"],
     python_version="3.8",
     run_commands=[
-        "mkdir -p /root/.cache/models",
-        "wget -c 'https://openaipublic.azureedge.net/main/whisper/models/81f7c96c852ee8fc832187b0132e569d6c3065a3252ed18e56effd0b6a73e524/large-v2.pt' -P /root/.cache/models"
+        "python -c 'from faster_whisper.utils import download_model; download_model(\"large-v2\")'",
     ]
 )
 class Whisper:
     def __setup__(self):
-        from faster_whisper import WhisperModel
-        self.model = WhisperModel("large-v2", device="cuda", compute_type="float16")
+        import whisperx
+        self.model = whisperx.load_model(
+            "large-v2",
+            device="cuda",
+            asr_options={
+                "initial_prompt": "This transcript is a single person talking. It could include filler words like 'um', 'uh', 'like', 'ah', 'like' and others words which are transcribed when they appear as a part of the transcript."
+            }
+        )
+        self.model_a, self.metadata = whisperx.load_align_model(language_code="en", device="cuda")
 
-    def load_audio(self, fp: str, start=None, end=None, sr: int = 16000):
+
+    def load_audio(self, fp: str, start=None, end=None, sr: int = 32000):
         import ffmpeg
         import numpy as np
 
@@ -55,6 +62,7 @@ class Whisper:
 
     def __predict__(self, audio: sieve.Audio) -> Dict:
         import time
+        import whisperx
         start_time = 0
         if hasattr(audio, "start_time") and hasattr(audio, "end_time"):
             print(f"start_time: {audio.start_time}, end_time: {audio.end_time}")
@@ -64,30 +72,47 @@ class Whisper:
             end_time = audio.end_time
             audio_np = self.load_audio(audio.path, start=start_time, end=end_time)
             print(f"load_audio: {time.time() - t}")
-            t = time.time()
-            result = self.model.transcribe(audio_np, word_timestamps=True)
-            print(f"transcribe: {time.time() - t}")
         else:
             t = time.time()
-            result = self.model.transcribe(audio.path, word_timestamps=True)
-            print(f"transcribe: {time.time() - t}")
+            audio_np = whisperx.load_audio(audio.path)
+            print(f"load_audio: {time.time() - t}")
 
+        t = time.time()
+        result = self.model.transcribe(audio_np, batch_size=16)
+        print(f"transcribe: {time.time() - t}")
+        # print(result_aligned['word_segments'])
+        t = time.time()
+        result_aligned = whisperx.align(result["segments"], self.model_a, self.metadata, audio_np, "cuda")
+        print(f"align: {time.time() - t}")
         out = []
-
-        for segment in result[0]:
+        for segment in result_aligned["segments"]:
             words = []
-            for word in segment.words:
+            for word in segment["words"]:
                 words.append({
-                    'word': word.word,
-                    'start': word.start + start_time,
-                    'end': word.end + start_time,
-                    'probability': word.probability
+                    'word': word["word"],
+                    'start': word["start"] + start_time,
+                    'end': word["end"] + start_time,
                 })
             out.append({
-                'text': segment.text,
-                'start': segment.start + start_time,
-                'end': segment.end + start_time,
+                'start': segment["start"] + start_time,
+                'end': segment["end"] + start_time,
+                'text': segment["text"],
                 'words': words
             })
 
         return out
+        # for segment in result[0]:
+        #     words = []
+        #     for word in segment.words:
+        #         words.append({
+        #             'word': word.word,
+        #             'start': word.start + start_time,
+        #             'end': word.end + start_time,
+        #             'probability': word.probability
+        #         })
+        #     out.append({
+        #         'text': segment.text,
+        #         'start': segment.start + start_time,
+        #         'end': segment.end + start_time,
+        #         'words': words
+        #     })
