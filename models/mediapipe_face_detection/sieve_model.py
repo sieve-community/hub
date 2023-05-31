@@ -34,5 +34,4 @@ class FaceDetector:
                     "score": detection.score[0],
                     "frame_number": None if not hasattr(img, "frame_number") else img.frame_number
                 })
-        print(outputs)
         return outputs
