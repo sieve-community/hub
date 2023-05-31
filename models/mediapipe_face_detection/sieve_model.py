@@ -1,6 +1,5 @@
 import sieve
 from typing import Dict, List
-import mediapipe as mp
 import cv2
 
 @sieve.Model(
@@ -13,11 +12,16 @@ import cv2
 )
 class FaceDetector:
     def __setup__(self):
+        import mediapipe as mp
         self.mp_face_detection = mp.solutions.face_detection
         self.face_detection = self.mp_face_detection.FaceDetection(min_detection_confidence=0.5)
 
     def __predict__(self, img: sieve.Image) -> List:
-        results = self.face_detection.process(cv2.cvtColor(img.array, cv2.COLOR_BGR2RGB))
+        import mediapipe as mp
+        try:
+            results = self.face_detection.process(cv2.cvtColor(img.array, cv2.COLOR_BGR2RGB))
+        except:
+            return []
         outputs = []
         if results.detections:
             for detection in results.detections:
