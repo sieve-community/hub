@@ -5,8 +5,9 @@ from typing import Dict
     name="whisperx",
     gpu = True,
     python_packages=[
-        "git+https://github.com/m-bain/whisperx.git",
+        "git+https://github.com/m-bain/whisperx.git@v3.0.0",
         "ffmpeg-python==0.2.0",
+        "torch==1.11.0",
     ],
     system_packages=["libgl1-mesa-glx", "libglib2.0-0", "ffmpeg"],
     python_version="3.8",
