@@ -2,13 +2,14 @@ import sieve
 from typing import Dict
 
 @sieve.Model(
-    name="whisperx",
+    name="whisperx_2",
     gpu = True,
     python_packages=[
         "git+https://github.com/m-bain/whisperx.git@v3.0.0",
         "ffmpeg-python==0.2.0",
         "torch==1.11.0",
     ],
+    cuda_version="11.2",
     system_packages=["libgl1-mesa-glx", "libglib2.0-0", "ffmpeg"],
     python_version="3.8",
     run_commands=[
@@ -64,6 +65,7 @@ class Whisper:
     def __predict__(self, audio: sieve.Audio) -> Dict:
         import time
         import whisperx
+        import numpy as np
         start_time = 0
         if hasattr(audio, "start_time") and hasattr(audio, "end_time"):
             print(f"start_time: {audio.start_time}, end_time: {audio.end_time}")
@@ -76,12 +78,20 @@ class Whisper:
         else:
             t = time.time()
             audio_np = whisperx.load_audio(audio.path)
+            print(audio_np.shape)
+            # Pad to 30 seconds with silence
+            if audio_np.shape[0] < 32000 * 30:
+                audio_np = np.pad(audio_np, (0, 32000 * 30 - audio_np.shape[0]), "constant")
+
             print(f"load_audio: {time.time() - t}")
 
         t = time.time()
-        result = self.model.transcribe(audio_np, batch_size=16)
+        result = self.model.transcribe(audio_np, batch_size=1)
         print(f"transcribe: {time.time() - t}")
         t = time.time()
+        print(result["segments"])
+        for segment in result["segments"]:
+            segment['text'] = ''.join(segment['text']) # No clue why this is a list
         result_aligned = whisperx.align(result["segments"], self.model_a, self.metadata, audio_np, "cuda")
         print(f"align: {time.time() - t}")
         out = []

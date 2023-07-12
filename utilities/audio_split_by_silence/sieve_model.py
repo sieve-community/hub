@@ -1,11 +1,9 @@
 import sieve
 
 @sieve.function(
-    name="audio_split_by_silence",
+    name="audio_split_by_silence_2",
     python_packages=[
-        "librosa==0.8.0",
-        "soundfile==0.12.1",
-        "ffmpeg-python==0.2.0"
+        "ffmpeg-python==0.2.0",
     ],
     system_packages=[
         "ffmpeg"
@@ -13,18 +11,14 @@ import sieve
     environment_variables=[
         sieve.Env(name="min_silence_length", default= 0.8),
         sieve.Env(name="min_segment_length", default= 30.0)
-    ]
+    ],
+    python_version="3.8"
 )
 def audio_split_by_silence(audio: sieve.Audio) -> sieve.Audio:
     import os
-    import sys
-    import librosa
-    import numpy as np
-    import soundfile as sf
     min_silence_length = float(os.getenv("min_silence_length"))
     min_segment_length = float(os.getenv("min_segment_length"))
 
-    from typing import Iterator
     import re
 
 

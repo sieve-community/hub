@@ -1,7 +1,7 @@
 import sieve
 
 @sieve.function(
-    name="extract_audio",
+    name="extract_audio_2",
     python_packages=[
         "moviepy==1.0.3",
     ]
